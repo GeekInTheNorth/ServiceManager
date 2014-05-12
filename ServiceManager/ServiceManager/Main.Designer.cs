@@ -28,8 +28,16 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
+            this.ServiceCheckTimer = new System.Windows.Forms.Timer(this.components);
             this.SuspendLayout();
+            // 
+            // ServiceCheckTimer
+            // 
+            this.ServiceCheckTimer.Enabled = true;
+            this.ServiceCheckTimer.Interval = 60000;
+            this.ServiceCheckTimer.Tick += new System.EventHandler(this.ServiceCheckTimer_Tick);
             // 
             // Main
             // 
@@ -46,6 +54,8 @@
         }
 
         #endregion
+
+        private System.Windows.Forms.Timer ServiceCheckTimer;
 
     }
 }

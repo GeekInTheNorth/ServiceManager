@@ -1,5 +1,6 @@
 *.csproj.user
 *.suo
+*.SUO
 ServiceManager/ServiceManager/bin/
 ServiceManager/ServiceManager/Bin/
 ServiceManager/ServiceManager/obj/
