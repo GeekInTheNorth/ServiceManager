@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using System.ServiceProcess;
 using System.Windows.Forms;
 using ServiceManager.Models;
@@ -20,98 +23,149 @@ namespace ServiceManager
 
         private const int RunningLabelWidth = 60;
 
+        private readonly WindowsServices windowsServices;
+
         public Main()
         {
             InitializeComponent();
+
+            windowsServices = new WindowsServices();
+
             BuildForm();
-            CheckServices();
         }
 
         private void BuildForm()
         {
-            var services = new ServiceRepository().GetAll();
+            Controls.Clear();
+
+            var services = windowsServices.GetConfiguredServices();
+
+            if (services.Any())
+                BuildForm(services);
+            else
+                BuildEmptyForm();                      
+        }
+
+        private void BuildEmptyForm()
+        {
+            var label = CreateLabel(@"There are currently no services referenced.", "lblServiceName", 0);
+            label.Left = LeftMargin;
+            label.Top = TopMargin;
+
+            var addButton = CreateButton(@"Add Service", BtnAddService);
+            addButton.Top = label.Top + label.Height + TopMargin;
+            addButton.Left = (label.Left + label.Width) - ButtonWidth;
+
+            Margin = new Padding(10);
+            AutoSize = true;
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        }
+
+        private void BuildForm(IEnumerable<ServiceModel> serviceModels)
+        {
             var labelNo = 0;
+            var startAllLeft = LeftMargin;
+            var stopAllLeft = startAllLeft + LeftMargin + ButtonWidth;
 
-            foreach (var service in services)
+            foreach (var service in serviceModels)
             {
-                var label = new Label();
-                label.Top = TopMargin + ((ControlHeight + TopMargin) * labelNo);
-                label.Left = LeftMargin;
-                label.Text = service.DisplayName;
-                label.Width = LabelWidth;
-                Controls.Add(label);
-
-                var runningLabel = new Label();
-                runningLabel.Top = label.Top;
-                runningLabel.Left = LeftMargin + LabelWidth + LeftMargin;
-                runningLabel.Text = @"Unknown";
-                runningLabel.Width = RunningLabelWidth;
-                runningLabel.Tag = service;
-                runningLabel.Name = string.Format("lblRunning{0}", labelNo);
-                Controls.Add(runningLabel);
-
-                var startButton = new Button();
-                startButton.Top = runningLabel.Top;
-                startButton.Left = runningLabel.Left + runningLabel.Width + LeftMargin;
-                startButton.Text = @"Start";
-                startButton.Click += BtnStartService;
-                startButton.Tag = service;
-                startButton.Width = ButtonWidth;
-                Controls.Add(startButton);
-
-                var stopButton = new Button();
-                stopButton.Top = runningLabel.Top;
-                stopButton.Left = startButton.Left + startButton.Width + LeftMargin;
-                stopButton.Text = @"Stop";
-                stopButton.Click += BtnStopService;
-                stopButton.Tag = service;
-                stopButton.Width = ButtonWidth;
-                Controls.Add(stopButton);
+                BuildFormRow(service, labelNo, ref startAllLeft, ref stopAllLeft);
 
                 labelNo++;
             }
 
-            var startAllButton = new Button();
+            var startAllButton = CreateButton(@"Start All", BtnStartAllServices);
             startAllButton.Top = TopMargin + ((ControlHeight + TopMargin) * labelNo);
-            startAllButton.Left = (LeftMargin * 3) + LabelWidth + RunningLabelWidth;
-            startAllButton.Text = @"Start All";
-            startAllButton.Click += BtnStartAllServices;
-            startAllButton.Width = ButtonWidth;
-            Controls.Add(startAllButton);
+            startAllButton.Left = startAllLeft;
 
-            var stopAllButton = new Button();
+            var stopAllButton = CreateButton(@"Stop All", BtnStopAllServices);
             stopAllButton.Top = startAllButton.Top;
-            stopAllButton.Left = startAllButton.Left + startAllButton.Width + LeftMargin;
-            stopAllButton.Text = @"Stop All";
-            stopAllButton.Click += BtnStopAllServices;
-            stopAllButton.Width = ButtonWidth;
-            Controls.Add(stopAllButton);
+            stopAllButton.Left = stopAllLeft;
+
+            var addButton = CreateButton(@"Add Service", BtnAddService);
+            addButton.Top = startAllButton.Top;
+            addButton.Left = (stopAllLeft < startAllLeft ? stopAllLeft : startAllLeft) - LeftMargin - ButtonWidth;
 
             Margin = new Padding(10);
             AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;            
+            AutoSizeMode = AutoSizeMode.GrowAndShrink; 
+        }
+
+        private void BuildFormRow(ServiceModel serviceModel, int labelNo, ref int startAllLeft, ref int stopAllLeft)
+        {
+            var removeButton = CreateButton(@"X", BtnRemoveService);
+            removeButton.Top = TopMargin + ((ControlHeight + TopMargin) * labelNo);
+            removeButton.Left = LeftMargin;
+            removeButton.Width = ControlHeight;
+            removeButton.Tag = serviceModel;
+
+            var label = CreateLabel(serviceModel.DisplayName, "lblServiceName", labelNo);
+            label.Top = TopMargin + ((ControlHeight + TopMargin) * labelNo);
+            label.Left = removeButton.Left + removeButton.Width + LeftMargin;
+
+            var runningLabel = CreateLabel(GetServiceStatusText(serviceModel), "lblRunning", labelNo);
+            runningLabel.Top = label.Top;
+            runningLabel.Left = label.Left + label.Width + LeftMargin;
+            runningLabel.Width = RunningLabelWidth;
+            runningLabel.Tag = serviceModel;
+
+            var startButton = CreateButton(@"Start", BtnStartService);
+            startButton.Top = runningLabel.Top;
+            startButton.Left = runningLabel.Left + runningLabel.Width + LeftMargin;
+            startButton.Tag = serviceModel;
+            startAllLeft = startButton.Left;
+
+            var stopButton = CreateButton(@"Stop", BtnStopService);
+            stopButton.Top = runningLabel.Top;
+            stopButton.Left = startButton.Left + startButton.Width + LeftMargin;
+            stopButton.Tag = serviceModel;
+            stopAllLeft = stopButton.Left;
+        }
+
+        private Button CreateButton(string text, EventHandler clickEvent)
+        {
+            var button = new Button { Height = ControlHeight, Width = ButtonWidth, Text = text };
+            button.Click += clickEvent;
+            Controls.Add(button);
+
+            return button;
+        }
+
+        private Label CreateLabel(string text, string labelName, int labelNumber)
+        {
+            var label = new Label
+                {
+                    Height = ControlHeight,
+                    Text = text,
+                    Name = string.Format("{0}{1}", labelName, labelNumber),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Width = LabelWidth
+                };
+            Controls.Add(label);
+
+            return label;
         }
 
         private void BtnStartService(object sender, EventArgs e)
         {
             var button = sender as Button;
-            Service service = null;
+            ServiceModel serviceModel = null;
             if (button != null)
-                service = button.Tag as Service;
+                serviceModel = button.Tag as ServiceModel;
 
-            if (service == null)
+            if (serviceModel == null)
                 return;
 
-            StartService(service);
+            windowsServices.StartService(serviceModel);
             CheckServices();
         }
 
         private void BtnStartAllServices(object sender, EventArgs e)
         {
-            var services = new ServiceRepository().GetAll();
+            var services = windowsServices.GetConfiguredServices();
             foreach (var service in services)
             {
-                StartService(service);
+                windowsServices.StartService(service);
             }
 
             CheckServices();
@@ -120,26 +174,54 @@ namespace ServiceManager
         private void BtnStopService(object sender, EventArgs e)
         {
             var button = sender as Button;
-            Service service = null;
+            ServiceModel serviceModel = null;
             if (button != null)
-                service = button.Tag as Service;
+                serviceModel = button.Tag as ServiceModel;
 
-            if (service == null)
+            if (serviceModel == null)
                 return;
 
-            StopService(service);
+            windowsServices.StopService(serviceModel);
             CheckServices();
         }
 
         private void BtnStopAllServices(object sender, EventArgs e)
         {
-            var services = new ServiceRepository().GetAll();
+            var services = windowsServices.GetConfiguredServices();
             foreach (var service in services)
             {
-                StopService(service);
+                windowsServices.StopService(service);
             }
 
             CheckServices();
+        }
+
+        private void BtnRemoveService(object sender, EventArgs e)
+        {
+            if (sender == null) throw new ArgumentNullException("sender");
+
+            var confirmation = MessageBox.Show(@"Are you sure you want to remove the reference to this service?",
+                                               @"Confirmation",
+                                               MessageBoxButtons.YesNo,
+                                               MessageBoxIcon.Question);
+
+            if (confirmation != DialogResult.Yes)
+                return;
+
+            var serviceModel = (sender as Button).Tag as ServiceModel;
+
+            windowsServices.RemoveServiceReference(serviceModel);
+
+            BuildForm();
+        }
+
+        private void BtnAddService(object sender, EventArgs e)
+        {
+            var addService = new AddService();
+            addService.ShowDialog();
+            addService.Dispose();
+
+            BuildForm();
         }
 
         private void CheckServices()
@@ -152,16 +234,15 @@ namespace ServiceManager
                 if (!name.StartsWith("lblRunning"))
                     continue;
 
-                var service = (control as Label).Tag as Service;
-                (control as Label).Text = GetServiceStatusText(service);
+                var serviceModel = (control as Label).Tag as ServiceModel;
+                windowsServices.GetStatus(serviceModel);
+                (control as Label).Text = GetServiceStatusText(serviceModel);
             }
         }
 
-        private string GetServiceStatusText(Service service)
+        private string GetServiceStatusText(ServiceModel serviceModel)
         {
-            var sc = new ServiceController(service.ServiceName);
-
-            switch (sc.Status)
+            switch (serviceModel.Status)
             {
                 case ServiceControllerStatus.Paused:
                     return "Paused";
@@ -183,26 +264,6 @@ namespace ServiceManager
         private void ServiceCheckTimer_Tick(object sender, EventArgs e)
         {
             CheckServices();
-        }
-
-        private void StartService(Service service)
-        {
-            var sc = new ServiceController(service.ServiceName);
-            if ((sc.Status == ServiceControllerStatus.Stopped) || (sc.Status == ServiceControllerStatus.Paused))
-            {
-                sc.Start();
-                sc.WaitForStatus(ServiceControllerStatus.Running);
-            }        
-        }
-
-        private void StopService(Service service)
-        {
-            var sc = new ServiceController(service.ServiceName);
-            if ((sc.Status == ServiceControllerStatus.Running) || (sc.Status == ServiceControllerStatus.Paused))
-            {
-                sc.Stop();
-                sc.WaitForStatus(ServiceControllerStatus.Stopped);
-            }
         }
     }
 }

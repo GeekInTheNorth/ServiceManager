@@ -10,7 +10,10 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Solmundr\ServiceManager
 
 Configuration entries are basically string values with the key being the service name and the value being a friendly label
 
+Updates:
+
+30/05/2014 : Added the ability to maintain the services being used by the application.
+
 TO DO:
 
-Add a means to configure services through the front end
 Shift Configuration data out of the Registry
