@@ -49,7 +49,7 @@
             this.Name = "Main";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "ServiceModel Manager";
+            this.Text = "Service Manager";
             this.ResumeLayout(false);
 
         }
