@@ -33,7 +33,7 @@ namespace ServiceManager.Repositories
                 }
             }
 
-            return serviceModels;
+            return serviceModels.OrderBy(x => x.DisplayName);
         }
 
         public IEnumerable<ServiceModel> GetWindowsServices()
@@ -48,7 +48,7 @@ namespace ServiceManager.Repositories
                                          Status = service.Status
                                      }).AsEnumerable();
 
-            return serviceModels;
+            return serviceModels.OrderBy(x => x.DisplayName);
         }
 
         public void GetStatus(ServiceModel serviceModel)
@@ -94,7 +94,7 @@ namespace ServiceManager.Repositories
 
         private RegistryKey GetApplicationRegistryKey()
         {
-            return Registry.LocalMachine.OpenSubKey("SOFTWARE\\Solmundr\\ServiceManager", RegistryKeyPermissionCheck.ReadWriteSubTree);
+            return Registry.LocalMachine.CreateSubKey("SOFTWARE\\Solmundr\\ServiceManager", RegistryKeyPermissionCheck.ReadWriteSubTree);
         }
 
         public void AddServiceReference(ServiceModel serviceModel)
